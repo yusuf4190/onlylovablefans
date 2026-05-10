@@ -5,8 +5,8 @@ services:
     plan: free
     buildCommand: >
       pip install -r requirements.txt &&
-      python manage.py collectstatic --noinput
-    preDeployCommand: python manage.py migrate
+      python manage.py collectstatic --noinput &&
+      python manage.py migrate
     startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
     envVars:
       - key: DEBUG
@@ -19,20 +19,12 @@ services:
         value: "onlylovablefans.onrender.com"
       - key: CSRF_TRUSTED_ORIGINS
         value: "https://onlylovablefans.onrender.com"
-      - key: MEDIA_ROOT
-        value: "/opt/render/project/src/storage/media"
-      - key: PRIVATE_STORAGE_ROOT
-        value: "/opt/render/project/src/storage/private_media"
       - key: SETUP_TOKEN
         generateValue: true
       - key: DATABASE_URL
         fromDatabase:
           name: onlylovablefans-db
           property: connectionString
-    disk:
-      name: onlylovablefans-disk
-      mountPath: /opt/render/project/src/storage
-      sizeGB: 1
 
 databases:
   - name: onlylovablefans-db
