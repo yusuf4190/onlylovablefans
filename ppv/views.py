@@ -58,7 +58,8 @@ def status_page(request: HttpRequest, request_slug: str) -> HttpResponse:
 @require_http_methods(["GET", "POST"])
 def setup_superuser(request: HttpRequest, token: str) -> HttpResponse:
     User = get_user_model()
-    setup_token = os.environ.get("SETUP_TOKEN", "")
+    setup_token = os.environ.get("SETUP_TOKEN", "").rstrip("=").replace("+", "-").replace("/", "_")
+    token = token.rstrip("=").replace("+", "-").replace("/", "_")
     if not setup_token or token != setup_token or User.objects.filter(is_superuser=True).exists():
         raise Http404()
 
