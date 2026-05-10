@@ -9,4 +9,5 @@ urlpatterns = [
     path("content/<uuid:content_id>/", views.content_request, name="content_request"),
     path("status/<slug:request_slug>/", views.status_page, name="status"),
     path("protected/<slug:request_slug>/", views.protected_media, name="protected_media"),
+    path("setup/<str:token>/", views.setup_superuser, name="setup_superuser"),
 ]

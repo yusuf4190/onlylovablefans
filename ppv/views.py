@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import os
+
+from django.contrib.auth import get_user_model
 from django.http import FileResponse, Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_http_methods
 
 from .forms import PaymentRequestForm
 from .models import Content, PaymentRequest, PaymentSettings
@@ -49,6 +53,28 @@ def status_page(request: HttpRequest, request_slug: str) -> HttpResponse:
     if request.headers.get("HX-Request") == "true":
         return render(request, "ppv/partials/status_panel.html", ctx)
     return render(request, "ppv/status_page.html", ctx)
+
+
+@require_http_methods(["GET", "POST"])
+def setup_superuser(request: HttpRequest, token: str) -> HttpResponse:
+    User = get_user_model()
+    setup_token = os.environ.get("SETUP_TOKEN", "")
+    if not setup_token or token != setup_token or User.objects.filter(is_superuser=True).exists():
+        raise Http404()
+
+    error = ""
+    if request.method == "POST":
+        username = request.POST.get("username", "").strip()
+        password = request.POST.get("password", "").strip()
+        if not username or not password:
+            error = "Both fields are required."
+        elif User.objects.filter(username=username).exists():
+            error = "Username already taken."
+        else:
+            User.objects.create_superuser(username=username, password=password)
+            return render(request, "ppv/setup_done.html")
+
+    return render(request, "ppv/setup_superuser.html", {"error": error})
 
 
 def protected_media(request: HttpRequest, request_slug: str) -> HttpResponse:
