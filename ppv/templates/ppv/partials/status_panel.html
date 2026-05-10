@@ -1,0 +1,119 @@
+{% load ppv_extras %}
+
+<div
+  id="status-panel"
+  class="saas-card rounded-3xl p-6"
+  hx-get="{% url 'ppv:status' request_slug=payment_request.request_slug %}"
+  hx-trigger="every 10s"
+  hx-swap="outerHTML"
+>
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div class="min-w-0">
+      <div class="text-[11px] font-semibold uppercase tracking-wider text-white/45">Status</div>
+      <div class="mt-2 flex items-center gap-2">
+        {% if payment_request.status == "pending" %}
+          <span class="pulse-gold inline-flex items-center rounded-full bg-goldBrand/15 px-3 py-1 text-xs font-semibold text-goldBrand ring-1 ring-goldBrand/35">
+            Pending
+          </span>
+          <span class="text-sm text-white/65">Awaiting confirmation</span>
+        {% elif payment_request.status == "approved" %}
+          <span class="inline-flex items-center rounded-full bg-emeraldBrand/15 px-3 py-1 text-xs font-semibold text-emeraldBrand ring-1 ring-emeraldBrand/35">
+            Unlocked
+          </span>
+          <span class="text-sm text-white/65">Access active</span>
+        {% else %}
+          <span class="inline-flex items-center rounded-full bg-red-400/15 px-3 py-1 text-xs font-semibold text-red-300 ring-1 ring-red-400/35">
+            Rejected
+          </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="w-full shrink-0 rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10 sm:w-auto">
+      <div class="text-[11px] text-white/45">Payment</div>
+      <div class="mt-1 text-xs font-semibold text-white/85">{{ payment_request.get_payment_method_display }}</div>
+      <div class="mt-1 text-[11px] text-white/50">Amount: <span class="font-semibold text-white/80">{{ payment_request.amount }}</span></div>
+    </div>
+  </div>
+
+  {% if payment_request.status == "pending" %}
+    <div class="mt-5 rounded-2xl bg-black/20 p-4 ring-1 ring-white/10">
+      <div class="flex items-center justify-between">
+        <div class="text-sm font-semibold text-white/85">We’re verifying your payment</div>
+        <div class="pulse-gold h-2.5 w-2.5 rounded-full bg-goldBrand"></div>
+      </div>
+      <p class="mt-2 text-sm text-white/55">This page updates automatically.</p>
+    </div>
+  {% elif payment_request.status == "rejected" %}
+    <div class="mt-5 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">
+      <div class="font-semibold">Rejection note</div>
+      {% if payment_request.admin_note %}
+        <div class="mt-1 whitespace-pre-wrap">{{ payment_request.admin_note }}</div>
+      {% else %}
+        <div class="mt-1">No note provided.</div>
+      {% endif %}
+    </div>
+  {% else %}
+    {% if payment_request.is_access_active %}
+      <div class="mt-5 rounded-2xl border border-goldBrand/35 bg-goldBrand/10 p-4 text-sm text-white/80">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <div class="text-xs font-semibold uppercase tracking-wider text-white/55">Unlocked</div>
+            <div class="mt-1 text-sm font-semibold text-white/90">Your access is active</div>
+          </div>
+          <div class="text-xs font-semibold text-goldBrand" data-expiry="{{ payment_request.expiry_at|date:'c' }}" id="expiry-timer">
+            Calculating…
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 space-y-4">
+        {% with filename=payment_request.content.media_file.name %}
+          {% if filename|media_kind == "video" %}
+            <div class="rounded-2xl ring-1 ring-goldBrand/35 overflow-hidden">
+              <video class="w-full" controls playsinline src="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}"></video>
+            </div>
+          {% elif filename|media_kind == "audio" %}
+            <div class="rounded-2xl ring-1 ring-goldBrand/35 bg-black/20 p-4">
+              <audio class="w-full" controls src="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}"></audio>
+            </div>
+          {% elif filename|media_kind == "image" %}
+            <div class="rounded-2xl ring-1 ring-goldBrand/35 overflow-hidden">
+              <img class="w-full" src="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}" alt="Unlocked content" />
+            </div>
+          {% else %}
+            <a class="saas-btn inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold text-charcoal-950" href="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}">
+              Open content
+            </a>
+          {% endif %}
+        {% endwith %}
+      </div>
+    {% else %}
+      <div class="mt-5 rounded-2xl bg-white/5 p-4 text-sm text-white/70 ring-1 ring-white/10">
+        <span class="font-semibold text-white/85">Access expired.</span> You’ll need a new request to unlock again.
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
+
+<script>
+  (function () {
+    const el = document.getElementById("expiry-timer");
+    if (!el) return;
+    const expiryIso = el.getAttribute("data-expiry");
+    if (!expiryIso) return;
+    const expiry = new Date(expiryIso).getTime();
+    function tick() {
+      const now = Date.now();
+      const diff = Math.max(0, expiry - now);
+      const s = Math.floor(diff / 1000);
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const ss = s % 60;
+      el.textContent = `Expires in ${h}h ${m}m ${ss}s`;
+      if (diff <= 0) clearInterval(t);
+    }
+    tick();
+    const t = setInterval(tick, 1000);
+  })();
+</script>

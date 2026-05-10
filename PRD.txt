@@ -1,0 +1,198 @@
+PRD: PPV Digital Content Unlock Platform (Manual Verification)
+1. Overview
+A minimal website for a content manager to sell pay‑per‑view digital media (video, image, audio) from multiple creators directly to customers. All payments (bank transfer, PayPal, crypto) are manually verified by the admin. After approval, the customer gets 24‑hour access to the content—no login required.
+
+2. Tech Stack
+Backend: Django (Python)
+
+Frontend: Django templates + HTMX + Tailwind CSS
+
+Database: SQLite (MVP) → PostgreSQL later
+
+File handling: django-private-storage for protected media files
+
+Admin: Built‑in Django Admin, customised (no custom dashboard)
+
+Hosting: Render (or VPS) – admin’s own account
+
+3. User Roles
+Customer – submits payment proof, waits for approval, views unlocked content
+
+Admin (Content Manager) – reviews payments, uploads content, manages creators, updates payment information
+
+4. Core Features / User Flows
+4.1 Customer Side (Public)
+Page: Content Request Page
+
+URL: /content/<uuid:content_id>/
+
+Shows:
+
+Content title, price, short description (optional), blurred thumbnail (optional)
+
+Payment details box (bank account, PayPal email, crypto wallet address) – set by admin
+
+A form to submit payment evidence:
+
+Payment method (dropdown: Bank Transfer / PayPal / Crypto)
+
+Amount (pre‑filled from content price)
+
+Evidence upload (image/pdf for bank/PayPal) OR text field for crypto transaction hash
+
+Optional email field (placeholder, not used for now)
+
+On valid submission:
+
+Creates a PaymentRequest with status pending and a unique request slug
+
+Redirects customer to Status Page
+
+Page: Status Page
+
+URL: /status/<slug:request_slug>/
+
+Displays:
+
+“Pending – Awaiting admin confirmation”
+
+Polls the server every 10 seconds via HTMX (sends hx-get to the same URL, returns status snippet)
+
+When admin approves:
+
+The page updates to show the protected media (image/video) with a timer “Access expires in XX hours”
+
+Media is served through a protected view that ensures:
+
+PaymentRequest.status == 'approved'
+
+now() < PaymentRequest.expiry_at
+
+If expired → “Access expired” message
+
+If admin rejects: shows the admin’s rejection note
+
+4.2 Admin Side (Django Admin)
+Models Registered in Admin:
+
+Content – upload media, set title/price, assign to a creator
+
+Creator – name, slug, optional bio
+
+PaymentRequest – list view with:
+
+Columns: request slug, creator, content, payment method, status, created_at
+
+List filter: status
+
+Actions: “Approve” (sets status approved, expiry_at = now + 24 hours), “Reject” (prompts for a note, sets status rejected)
+
+Inline preview of evidence (image/transaction hash)
+
+PaymentSettings – singleton (only one row) for:
+
+bank_details (TextField)
+
+paypal_email (EmailField)
+
+crypto_wallet_address (CharField)
+
+Workflow:
+
+Admin logs into /admin
+
+Checks pending PaymentRequests
+
+Manually verifies payment (checks bank app, PayPal, or blockchain explorer)
+
+Clicks “Approve” → customer’s status page instantly unlocks the media
+
+Content is only accessible through the approved request’s protected URL; no public direct links
+
+5. Data Models (Django Models)
+Creator
+name (CharField)
+
+slug (SlugField, unique)
+
+bio (TextField, optional)
+
+Content
+creator (ForeignKey → Creator)
+
+title (CharField)
+
+price (DecimalField)
+
+media_file (FileField, stored in private storage)
+
+preview_image (ImageField, optional, for a blurred thumbnail)
+
+uuid (UUIDField, default=uuid4, unique) – public request URL identifier
+
+created_at
+
+PaymentSettings (Singleton)
+id = 1 always (single settings object)
+
+bank_details (TextField)
+
+paypal_email (EmailField)
+
+crypto_address (CharField)
+
+PaymentRequest
+content (ForeignKey → Content)
+
+payment_method (CharField, choices: bank_transfer, paypal, crypto)
+
+amount (DecimalField, should match content price)
+
+evidence_file (FileField, blank, null – for payment screenshots)
+
+transaction_hash (CharField, blank, null – for crypto payments)
+
+status (CharField, choices: pending, approved, rejected, default=pending)
+
+admin_note (TextField, blank – rejection reason)
+
+request_slug (SlugField, unique, default=short UUID)
+
+created_at (DateTimeField, auto_now_add)
+
+approved_at (DateTimeField, null, blank)
+
+expiry_at (DateTimeField, null, blank)
+
+fan_email (EmailField, blank, optional – placeholder for future notifications)
+
+6. Security & Compliance
+Media files are stored in a private directory using django-private-storage.
+
+Protected media view enforces: only the specific PaymentRequest holder (via slug in URL) can view, and only if status == approved and now() < expiry_at.
+
+Django’s built‑in CSRF & XSS protections are active.
+
+No customer login or session; access is completely link‑based (token/slug in URL).
+
+7. Deployment
+Deployable on Render (or any platform that supports Python/Django and persistent disk).
+
+Admin creates own account, adds domain, sets environment variables (SECRET_KEY, DEBUG=False, ALLOWED_HOSTS).
+
+Static files served via WhiteNoise.
+
+Persistent volume mounted at /opt/render/media for all uploaded files (media, evidence).
+
+Developer provides a simple 5‑step deploy guide.
+
+8. What is NOT Included
+No automatic payment verification (webhooks/APIs).
+
+No email notification system.
+
+No customer registration or login.
+
+No public profiles or creator pages.
+
+No analytics beyond Django Admin list views.

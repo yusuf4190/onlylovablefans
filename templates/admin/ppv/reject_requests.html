@@ -1,0 +1,32 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  <h1>{{ title }}</h1>
+
+  <p>You are rejecting the following payment requests:</p>
+  <ul>
+    {% for r in requests %}
+      <li>
+        <strong>{{ r.request_slug }}</strong> —
+        {{ r.content.creator.name }} / {{ r.content.title }} ({{ r.payment_method }})
+      </li>
+    {% empty %}
+      <li>No requests selected.</li>
+    {% endfor %}
+  </ul>
+
+  <form method="post" style="margin-top: 1rem;">
+    {% csrf_token %}
+    <div>
+      {{ form.note.label_tag }}<br />
+      {{ form.note }}<br />
+      {% for e in form.note.errors %}<div style="color: #b91c1c;">{{ e }}</div>{% endfor %}
+    </div>
+    <div style="margin-top: 1rem;">
+      <input type="submit" class="default" value="{% trans 'Reject' %}" />
+      <a href=".." class="button cancel-link">{% trans 'Cancel' %}</a>
+    </div>
+  </form>
+{% endblock %}
+
