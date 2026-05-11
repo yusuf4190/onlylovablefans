@@ -8,7 +8,7 @@ from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
 
-from .models import Content, Creator, PaymentRequest, PaymentSettings
+from .models import Content, Creator, CryptoWallet, PaymentRequest, PaymentSettings
 
 admin.site.site_header = "Onlylovablefans"
 admin.site.site_title = "Onlylovablefans Admin"
@@ -42,6 +42,12 @@ class PaymentSettingsAdmin(admin.ModelAdmin):
 
 
 admin.site.register(PaymentSettings, PaymentSettingsAdmin)
+
+
+@admin.register(CryptoWallet)
+class CryptoWalletAdmin(admin.ModelAdmin):
+    list_display = ["label", "address", "order"]
+    ordering = ["order", "label"]
 
 
 class RejectNoteForm(forms.Form):

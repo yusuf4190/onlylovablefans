@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from .forms import PaymentRequestForm
-from .models import Content, PaymentRequest, PaymentSettings
+from .models import Content, CryptoWallet, PaymentRequest, PaymentSettings
 
 
 def home(request: HttpRequest) -> HttpResponse:
@@ -42,7 +42,7 @@ def content_request(request: HttpRequest, content_id) -> HttpResponse:
     return render(
         request,
         "ppv/content_request.html",
-        {"content": content, "payment_settings": payment_settings, "form": form},
+        {"content": content, "payment_settings": payment_settings, "form": form, "crypto_wallets": CryptoWallet.objects.all()},
     )
 
 

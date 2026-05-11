@@ -26,7 +26,7 @@
         </div>
         <div class="shrink-0 rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
           <div class="text-[11px] text-white/55">Price</div>
-          <div class="mt-1 text-sm font-semibold text-white/90">{{ content.price }}</div>
+          <div class="mt-1 text-sm font-semibold text-white/90">${{ content.price }}</div>
         </div>
       </div>
 
@@ -57,13 +57,29 @@
             <div class="mt-2 text-sm text-white/70">{{ payment_settings.paypal_email|default:"Not set" }}</div>
           </div>
 
+          {% if crypto_wallets %}
           <div class="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
-            <div class="flex items-center justify-between gap-3">
-              <div class="text-xs font-semibold text-white/80">Crypto</div>
-              <button type="button" class="text-[11px] font-semibold text-emeraldBrand hover:brightness-110" data-copy="{{ payment_settings.crypto_address|default:'' }}">Copy</button>
+            <div class="text-xs font-semibold text-white/80 mb-3">Crypto</div>
+            <div class="space-y-3">
+              {% for wallet in crypto_wallets %}
+              <div class="rounded-xl bg-white/5 p-3 ring-1 ring-white/10">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="text-[11px] font-semibold text-white/60">{{ wallet.label }}</div>
+                  <button type="button" class="text-[11px] font-semibold text-emeraldBrand hover:brightness-110" data-copy="{{ wallet.address }}">Copy</button>
+                </div>
+                <div class="mt-1 break-all text-xs text-white/70">{{ wallet.address }}</div>
+              </div>
+              {% endfor %}
             </div>
-            <div class="mt-2 break-all text-sm text-white/70">{{ payment_settings.crypto_address|default:"Not set" }}</div>
           </div>
+          {% endif %}
+
+          {% if payment_settings.giftcard_details %}
+          <div class="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+            <div class="text-xs font-semibold text-white/80">Gift Card</div>
+            <pre class="mt-2 whitespace-pre-wrap text-xs text-white/70">{{ payment_settings.giftcard_details }}</pre>
+          </div>
+          {% endif %}
         </div>
       </div>
     </section>
@@ -94,7 +110,7 @@
         </div>
 
         <div id="evidence-block" class="grid gap-2">
-          <label class="text-[11px] font-semibold uppercase tracking-wider text-white/55" for="{{ form.evidence_file.id_for_label }}">Evidence upload (Bank/PayPal)</label>
+          <label class="text-[11px] font-semibold uppercase tracking-wider text-white/55" for="{{ form.evidence_file.id_for_label }}">Evidence upload (Bank / PayPal / Gift Card)</label>
           {{ form.evidence_file }}
           <p class="text-xs text-white/45">Upload a screenshot or PDF showing the transfer.</p>
           {% for e in form.evidence_file.errors %}<p class="text-sm text-red-300">{{ e }}</p>{% endfor %}
@@ -138,6 +154,7 @@
         const tx = document.getElementById("tx-block");
         if (!evidence || !tx) return;
         const isCrypto = method === "crypto";
+        const isGiftCard = method === "gift_card";
         evidence.style.display = isCrypto ? "none" : "";
         tx.style.display = isCrypto ? "" : "none";
       }

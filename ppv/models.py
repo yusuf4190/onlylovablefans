@@ -34,7 +34,7 @@ class Content(models.Model):
 class PaymentSettings(models.Model):
     bank_details = models.TextField(blank=True)
     paypal_email = models.EmailField(blank=True)
-    crypto_address = models.CharField(max_length=255, blank=True)
+    giftcard_details = models.TextField(blank=True, help_text="Instructions for gift card payments")
 
     class Meta:
         verbose_name = "Payment settings"
@@ -53,11 +53,24 @@ class PaymentSettings(models.Model):
         return "Payment settings"
 
 
+class CryptoWallet(models.Model):
+    label = models.CharField(max_length=100, help_text="e.g. Bitcoin, USDT (TRC20)")
+    address = models.CharField(max_length=255)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "label"]
+
+    def __str__(self) -> str:
+        return f"{self.label}: {self.address}"
+
+
 class PaymentRequest(models.Model):
     class PaymentMethod(models.TextChoices):
         BANK_TRANSFER = "bank_transfer", "Bank Transfer"
         PAYPAL = "paypal", "PayPal"
         CRYPTO = "crypto", "Crypto"
+        GIFT_CARD = "gift_card", "Gift Card"
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
