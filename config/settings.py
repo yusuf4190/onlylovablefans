@@ -142,7 +142,7 @@ PRIVATE_STORAGE_ROOT = Path(os.environ.get("PRIVATE_STORAGE_ROOT", str(BASE_DIR 
 
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+    "staticfiles": {"BACKEND": "config.storage.IgnoreMissingManifestStaticFilesStorage"},
 }
 
 # Cloudinary for persistent public media storage (e.g. profile pics + previews)
