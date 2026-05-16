@@ -7,4 +7,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('private/', include('private_storage.urls')),
     path('', include('ppv.urls')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+# Only serve uploaded media files from Django in local/dev when using filesystem storage.
+# In production (and/or with Cloudinary), media URLs should resolve to the external storage.
+if settings.DEBUG and not getattr(settings, "USE_CLOUDINARY", False):
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

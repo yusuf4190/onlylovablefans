@@ -27,7 +27,8 @@ This repo includes a `render.yaml` Blueprint at `render.yaml:1`.
 
 1. Create a new Blueprint in Render and point it at your repo (recommended)
 2. Set your custom domain (optional) and update `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS`
-3. Ensure you have a persistent disk (needed for `media/` + `private_media/` uploads)
+3. Set `CLOUDINARY_URL` in Render (recommended for persistent public uploads on Render free tier)
+4. If you want paid content + payment evidence to persist, add a Render Disk or move private storage to S3/Cloudinary (advanced)
 
 Render runs:
 - Build: installs deps + `collectstatic`
@@ -35,6 +36,9 @@ Render runs:
 - Start: `gunicorn config.wsgi:application --bind 0.0.0.0:$PORT`
 
 Notes:
-- Public previews use `MEDIA_ROOT` (`media/`), but paid content + evidence are stored under `PRIVATE_STORAGE_ROOT` (`private_media/`) via `django-private-storage`.
+- If `CLOUDINARY_URL` is set, public images (creator profiles + previews) use Cloudinary via Django storage.
+- Paid content + evidence are stored under `PRIVATE_STORAGE_ROOT` (`private_media/`) via `django-private-storage` by default.
 - In production, ensure your platform does **not** serve `private_media/` directly; content is only served through `/protected/<slug>/`.
-- Render note: `render.yaml` mounts a disk at `/opt/render/project/src/storage` and sets `MEDIA_ROOT` + `PRIVATE_STORAGE_ROOT` there so uploads persist across deploys.
+- Render note: without a persistent disk, files stored on the local filesystem may be lost on deploy/restart.
+
+
