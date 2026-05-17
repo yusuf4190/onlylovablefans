@@ -23,7 +23,11 @@ class IgnoreMissingManifestStaticFilesStorage(CompressedManifestStaticFilesStora
             return name
 
     def post_process(self, *args, **kwargs):
-        gen = super().post_process(*args, **kwargs)
+        try:
+            gen = super().post_process(*args, **kwargs)
+        except MissingFileError as exc:
+            logger.warning("Ignoring missing static file during collectstatic (pre-gen): %s", exc)
+            return iter(())
         while True:
             try:
                 item = next(gen)
@@ -32,7 +36,5 @@ class IgnoreMissingManifestStaticFilesStorage(CompressedManifestStaticFilesStora
             except MissingFileError as exc:
                 logger.warning("Ignoring missing static file during collectstatic: %s", exc)
                 continue
-            except Exception:
-                raise
             else:
                 yield item
