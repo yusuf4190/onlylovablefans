@@ -1,10 +1,25 @@
 import uuid
+import os
 from datetime import timedelta
 
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 from private_storage.fields import PrivateFileField
+
+# Determine storage for private files: prefer Cloudinary when configured,
+# otherwise fall back to the default private file system storage.
+try:
+    if os.environ.get("CLOUDINARY_URL"):
+        from cloudinary_storage.storage import MediaCloudinaryStorage
+
+        PRIVATE_FILE_STORAGE = MediaCloudinaryStorage()
+    else:
+        raise ImportError()
+except Exception:
+    from private_storage.storage.files import PrivateFileSystemStorage
+
+    PRIVATE_FILE_STORAGE = PrivateFileSystemStorage()
 
 
 class Creator(models.Model):
@@ -22,7 +37,7 @@ class Content(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
-    media_file = PrivateFileField(upload_to="content/")
+    media_file = PrivateFileField(upload_to="content/", storage=PRIVATE_FILE_STORAGE)
     preview_image = models.ImageField(upload_to="previews/", blank=True)
     uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -81,7 +96,7 @@ class PaymentRequest(models.Model):
     content = models.ForeignKey(Content, on_delete=models.PROTECT, related_name="payment_requests")
     payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices)
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
-    evidence_file = PrivateFileField(upload_to="evidence/", blank=True, null=True)
+    evidence_file = PrivateFileField(blank=True, null=True, upload_to="evidence/", storage=PRIVATE_FILE_STORAGE)
     transaction_hash = models.CharField(max_length=200, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     admin_note = models.TextField(blank=True)

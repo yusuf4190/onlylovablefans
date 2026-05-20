@@ -141,6 +141,20 @@ MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", str(BASE_DIR / "media")))
 # django-private-storage (keeps paid content + payment evidence off public URLs)
 PRIVATE_STORAGE_ROOT = Path(os.environ.get("PRIVATE_STORAGE_ROOT", str(BASE_DIR / "private_media")))
 
+# Optional Cloudinary integration: enable when CLOUDINARY_URL is configured.
+# We append the apps and set `DEFAULT_FILE_STORAGE` only when the env var is present
+# so deployments without Cloudinary keep using local/media + private storage.
+if os.environ.get("CLOUDINARY_URL"):
+    INSTALLED_APPS += ["cloudinary", "cloudinary_storage"]
+    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+    # Optional: set CLOUDINARY_STORAGE dict or use CLOUDINARY_URL env var.
+    # Example (optional):
+    # CLOUDINARY_STORAGE = {
+    #     "CLOUD_NAME": os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    #     "API_KEY": os.environ.get("CLOUDINARY_API_KEY"),
+    #     "API_SECRET": os.environ.get("CLOUDINARY_API_SECRET"),
+    # }
+
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
