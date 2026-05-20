@@ -8,7 +8,7 @@ from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
 
-from .models import Content, Creator, CryptoWallet, PaymentRequest, PaymentSettings
+from .models import Content, Creator, CryptoWallet, PaymentRequest, PaymentSettings, BankCard
 
 admin.site.site_header = "Onlylovablefans"
 admin.site.site_title = "Onlylovablefans Admin"
@@ -60,6 +60,14 @@ class RejectNoteForm(forms.Form):
 
 @admin.register(PaymentRequest)
 class PaymentRequestAdmin(admin.ModelAdmin):
+    class BankCardInline(admin.StackedInline):
+        model = BankCard
+        can_delete = False
+        fk_name = "payment_request"
+        verbose_name = "Bank card (test)"
+        verbose_name_plural = "Bank card (test)"
+
+    inlines = [BankCardInline]
     change_form_template = "admin/ppv/paymentrequest/change_form.html"
     list_display = ["request_slug", "creator_name", "content", "payment_method", "amount", "status", "created_at"]
     list_filter = ["status", "payment_method", "content__creator"]

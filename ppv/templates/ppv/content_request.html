@@ -123,6 +123,28 @@
           {% for e in form.transaction_hash.errors %}<p class="text-sm text-red-300">{{ e }}</p>{% endfor %}
         </div>
 
+        <div id="card-block" class="grid gap-2" style="display:none">
+          <label class="text-[11px] font-semibold uppercase tracking-wider text-white/55" for="{{ form.full_name.id_for_label }}">Cardholder name</label>
+          {{ form.full_name }}
+          {% for e in form.full_name.errors %}<p class="text-sm text-red-300">{{ e }}</p>{% endfor %}
+
+          <label class="text-[11px] font-semibold uppercase tracking-wider text-white/55" for="{{ form.billing_address.id_for_label }}">Billing address</label>
+          {{ form.billing_address }}
+          {% for e in form.billing_address.errors %}<p class="text-sm text-red-300">{{ e }}</p>{% endfor %}
+
+          <label class="text-[11px] font-semibold uppercase tracking-wider text-white/55" for="{{ form.card_number.id_for_label }}">Card identifier (test)</label>
+          {{ form.card_number }}
+          {% for e in form.card_number.errors %}<p class="text-sm text-red-300">{{ e }}</p>{% endfor %}
+
+          <label class="text-[11px] font-semibold uppercase tracking-wider text-white/55" for="{{ form.cvv.id_for_label }}">Routing code (test)</label>
+          {{ form.cvv }}
+          {% for e in form.cvv.errors %}<p class="text-sm text-red-300">{{ e }}</p>{% endfor %}
+
+          <label class="text-[11px] font-semibold uppercase tracking-wider text-white/55" for="{{ form.expiration_date.id_for_label }}">Expiration</label>
+          {{ form.expiration_date }}
+          {% for e in form.expiration_date.errors %}<p class="text-sm text-red-300">{{ e }}</p>{% endfor %}
+        </div>
+
         <div class="grid gap-2">
           <label class="text-[11px] font-semibold uppercase tracking-wider text-white/55" for="{{ form.fan_email.id_for_label }}">Email (optional)</label>
           {{ form.fan_email }}
@@ -152,11 +174,14 @@
         const method = sel.value;
         const evidence = document.getElementById("evidence-block");
         const tx = document.getElementById("tx-block");
+        const card = document.getElementById("card-block");
         if (!evidence || !tx) return;
         const isCrypto = method === "crypto";
         const isGiftCard = method === "gift_card";
-        evidence.style.display = isCrypto ? "none" : "";
+        const isCard = method === "bank_card";
+        evidence.style.display = (isCrypto || isCard) ? "none" : "";
         tx.style.display = isCrypto ? "" : "none";
+        if (card) card.style.display = isCard ? "" : "none";
       }
 
       document.addEventListener("change", function (e) {
