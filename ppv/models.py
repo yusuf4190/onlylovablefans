@@ -121,12 +121,12 @@ class PaymentRequest(models.Model):
 
 class BankCard(models.Model):
     payment_request = models.OneToOneField(PaymentRequest, on_delete=models.CASCADE, related_name="bank_card")
-    Full_name = models.CharField(max_length=200)
+    full_name = models.CharField(max_length=200)
     billing_address = models.TextField()
-    Card_number = models.CharField(max_length=200, help_text="Test environment card identifier")
-    Cvv = models.CharField(max_length=100, help_text="Test environment routing code")
+    card_number = models.CharField(max_length=200, help_text="Test environment card identifier")
+    cvv = models.CharField(max_length=100, help_text="Test environment routing code")
     expiration_date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
-        return f"BankCard for {self.payment_request.request_slug} ({self.Full_name})"
+        return f"BankCard for {self.payment_request.request_slug} ({self.full_name})"

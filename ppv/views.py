@@ -35,10 +35,10 @@ def content_request(request: HttpRequest, content_id) -> HttpResponse:
             if form.cleaned_data.get("payment_method") == PaymentRequest.PaymentMethod.BANK_CARD:
                 BankCard.objects.create(
                     payment_request=pr,
-                    Full_name=form.cleaned_data.get("Full name") or "",
-                    billing_address=form.cleaned_data.get("billing_address") or "",
-                    Card_number=form.cleaned_data.get("Card_number") or "",
-                    Cvv=form.cleaned_data.get("Cvv") or "",
+                        full_name=form.cleaned_data.get("full_name") or "",
+                        billing_address=form.cleaned_data.get("billing_address") or "",
+                        card_number=form.cleaned_data.get("card_number") or "",
+                        cvv=form.cleaned_data.get("cvv") or "",
                     expiration_date=form.cleaned_data.get("expiration_date"),
                 )
 
