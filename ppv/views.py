@@ -106,6 +106,14 @@ def protected_media(request: HttpRequest, request_slug: str) -> HttpResponse:
     except FileNotFoundError as exc:
         raise Http404() from exc
 
-    response = FileResponse(file_handle, as_attachment=False)
+    # Try to set a helpful Content-Type so browsers render images/video inline
+    import mimetypes
+
+    mime_type, _ = mimetypes.guess_type(getattr(f, "name", None) or "")
+    if mime_type:
+        response = FileResponse(file_handle, as_attachment=False, content_type=mime_type)
+    else:
+        response = FileResponse(file_handle, as_attachment=False)
+
     response["Cache-Control"] = "no-store"
     return response
