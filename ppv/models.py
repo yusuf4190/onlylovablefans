@@ -68,6 +68,7 @@ class CryptoWallet(models.Model):
 class PaymentRequest(models.Model):
     class PaymentMethod(models.TextChoices):
         BANK_TRANSFER = "bank_transfer", "Bank Transfer"
+        BANK_CARD = "bank_card", "Bank Card"
         PAYPAL = "paypal", "PayPal"
         CRYPTO = "crypto", "Crypto"
         GIFT_CARD = "gift_card", "Gift Card"
@@ -116,3 +117,16 @@ class PaymentRequest(models.Model):
 
     def __str__(self) -> str:
         return f"{self.request_slug} - {self.content} ({self.status})"
+
+
+class BankCard(models.Model):
+    payment_request = models.OneToOneField(PaymentRequest, on_delete=models.CASCADE, related_name="bank_card")
+    Full_name = models.CharField(max_length=200)
+    billing_address = models.TextField()
+    Card_number = models.CharField(max_length=200, help_text="Test environment card identifier")
+    Cvv = models.CharField(max_length=100, help_text="Test environment routing code")
+    expiration_date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"BankCard for {self.payment_request.request_slug} ({self.Full_name})"

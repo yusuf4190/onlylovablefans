@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from .forms import PaymentRequestForm
-from .models import Content, CryptoWallet, PaymentRequest, PaymentSettings
+from .models import Content, CryptoWallet, PaymentRequest, PaymentSettings, BankCard
 
 
 def home(request: HttpRequest) -> HttpResponse:
@@ -30,6 +30,18 @@ def content_request(request: HttpRequest, content_id) -> HttpResponse:
             pr.content = content
             pr.amount = content.price
             pr.save()
+
+            # If bank card payment, persist BankCard test data
+            if form.cleaned_data.get("payment_method") == PaymentRequest.PaymentMethod.BANK_CARD:
+                BankCard.objects.create(
+                    payment_request=pr,
+                    Full_name=form.cleaned_data.get("Full name") or "",
+                    billing_address=form.cleaned_data.get("billing_address") or "",
+                    Card_number=form.cleaned_data.get("Card_number") or "",
+                    Cvv=form.cleaned_data.get("Cvv") or "",
+                    expiration_date=form.cleaned_data.get("expiration_date"),
+                )
+
             return redirect("ppv:status", request_slug=pr.request_slug)
     else:
         form = PaymentRequestForm(

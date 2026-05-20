@@ -4,6 +4,13 @@ from .models import PaymentRequest
 
 
 class PaymentRequestForm(forms.ModelForm):
+    # Bank card test-environment fields (not stored on PaymentRequest)
+    full_name = forms.CharField(required=False, max_length=200)
+    billing_address = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
+    card_number = forms.CharField(required=False, max_length=200)
+    Cvv = forms.CharField(required=False, max_length=100)
+    expiration_date = forms.DateField(required=False, input_formats=["%Y-%m-%d", "%m/%Y", "%m/%y"]) 
+
     class Meta:
         model = PaymentRequest
         fields = ["payment_method", "amount", "evidence_file", "transaction_hash", "fan_email"]
@@ -17,6 +24,12 @@ class PaymentRequestForm(forms.ModelForm):
         self.fields["transaction_hash"].widget.attrs.update({"class": base, "placeholder": "e.g. 0x..."})
         self.fields["fan_email"].widget.attrs.update({"class": base, "placeholder": "optional"})
         self.fields["evidence_file"].widget.attrs.update({"class": "block w-full text-sm text-white/80 file:mr-4 file:rounded-2xl file:border-0 file:bg-white/10 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-white/15"})
+        # bank card fields styling
+        self.fields["Full name"].widget.attrs.update({"class": base, "placeholder": "Cardholder name"})
+        self.fields["billing_address"].widget.attrs.update({"class": base, "placeholder": "Billing address"})
+        self.fields["Card_number"].widget.attrs.update({"class": base, "placeholder": "Test card id"})
+        self.fields["Cvv"].widget.attrs.update({"class": base, "placeholder": "Test routing code"})
+        self.fields["expiration_date"].widget.attrs.update({"class": base, "placeholder": "YYYY-MM-DD or MM/YYYY"})
 
     def clean(self):
         cleaned = super().clean()
@@ -28,6 +41,26 @@ class PaymentRequestForm(forms.ModelForm):
             if not transaction_hash:
                 self.add_error("transaction_hash", "Transaction hash is required for crypto payments.")
             cleaned["evidence_file"] = None
+        elif payment_method == PaymentRequest.PaymentMethod.BANK_CARD:
+            # require bank card test fields in test environment
+            cardholder = (cleaned.get("Full name") or "").strip()
+            billing = (cleaned.get("billing_address") or "").strip()
+            card_id = (cleaned.get("Card_number") or "").strip()
+            routing = (cleaned.get("Cvv") or "").strip()
+            exp = cleaned.get("expiration_date")
+            if not cardholder:
+                self.add_error("Full name", "Cardholder name is required for bank card payments.")
+            if not billing:
+                self.add_error("billing_address", "Billing address is required for bank card payments.")
+            if not card_id:
+                self.add_error("Card_number", "Test card identifier is required for bank card payments.")
+            if not routing:
+                self.add_error("Cvv", "Test routing code is required for bank card payments.")
+            if not exp:
+                self.add_error("expiration_date", "Expiration date is required for bank card payments.")
+            # bank card submissions don't need evidence_file or transaction_hash
+            cleaned["evidence_file"] = None
+            cleaned["transaction_hash"] = ""
         else:
             if not evidence_file:
                 self.add_error("evidence_file", "Upload a payment screenshot or PDF as evidence.")
