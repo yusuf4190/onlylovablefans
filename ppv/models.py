@@ -109,6 +109,18 @@ class PaymentRequest(models.Model):
     def save(self, *args, **kwargs):
         if not self.request_slug:
             self.request_slug = uuid.uuid4().hex[:12]
+        # If status is approved but timestamps are missing, populate them.
+        # If status is not approved, ensure approval/expiry are cleared.
+        if self.status == self.Status.APPROVED and not self.expiry_at:
+            now = timezone.now()
+            if not self.approved_at:
+                self.approved_at = now
+            self.expiry_at = now + timedelta(hours=24)
+
+        if self.status != self.Status.APPROVED:
+            self.approved_at = None
+            self.expiry_at = None
+
         return super().save(*args, **kwargs)
 
     def approve(self):
