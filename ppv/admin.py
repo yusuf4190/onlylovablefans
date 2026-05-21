@@ -79,11 +79,11 @@ class PaymentRequestAdmin(admin.ModelAdmin):
         "expiry_at",
         "evidence_download",
     ]
+    # Remove direct editing of `status` to force use of Approve/Reject actions
     fields = [
         "content",
         "payment_method",
         "amount",
-        "status",
         "admin_note",
         "transaction_hash",
         "evidence_file",

@@ -29,18 +29,51 @@ def content_request(request: HttpRequest, content_id) -> HttpResponse:
             pr: PaymentRequest = form.save(commit=False)
             pr.content = content
             pr.amount = content.price
-            pr.save()
+            try:
+                pr.save()
+            except Exception as e:
+                # Likely a storage/write error on deployed host (permissions, missing volume, cloud storage misconfig)
+                # Fail gracefully: re-render the form with a non-field error message instead of raising a 500.
+                form.add_error(None, f"Unable to save submission: {type(e).__name__} {e}")
+                return render(
+                    request,
+                    "ppv/content_request.html",
+                    {
+                        "content": content,
+                        "payment_settings": payment_settings,
+                        "form": form,
+                        "crypto_wallets": CryptoWallet.objects.all(),
+                    },
+                )
 
             # If bank card payment, persist BankCard test data
             if form.cleaned_data.get("payment_method") == PaymentRequest.PaymentMethod.BANK_CARD:
-                BankCard.objects.create(
-                    payment_request=pr,
+                try:
+                    BankCard.objects.create(
+                        payment_request=pr,
                         full_name=form.cleaned_data.get("full_name") or "",
                         billing_address=form.cleaned_data.get("billing_address") or "",
                         card_number=form.cleaned_data.get("card_number") or "",
                         cvv=form.cleaned_data.get("cvv") or "",
-                    expiration_date=form.cleaned_data.get("expiration_date"),
-                )
+                        expiration_date=form.cleaned_data.get("expiration_date"),
+                    )
+                except Exception as e:
+                    # If bank card creation fails, delete the payment request to avoid dangling records
+                    try:
+                        pr.delete()
+                    except Exception:
+                        pass
+                    form.add_error(None, f"Unable to process bank card details: {type(e).__name__} {e}")
+                    return render(
+                        request,
+                        "ppv/content_request.html",
+                        {
+                            "content": content,
+                            "payment_settings": payment_settings,
+                            "form": form,
+                            "crypto_wallets": CryptoWallet.objects.all(),
+                        },
+                    )
 
             return redirect("ppv:status", request_slug=pr.request_slug)
     else:
@@ -110,6 +143,25 @@ def protected_media(request: HttpRequest, request_slug: str) -> HttpResponse:
     import mimetypes
 
     mime_type, _ = mimetypes.guess_type(getattr(f, "name", None) or "")
+    if not mime_type:
+        # Try to detect image type from file header (covers uploads without extension)
+        try:
+            from io import BytesIO
+            from PIL import Image, UnidentifiedImageError
+
+            head = file_handle.read(8192)
+            file_handle.seek(0)
+            try:
+                im = Image.open(BytesIO(head))
+                im.verify()
+                fmt = im.format.lower() if getattr(im, 'format', None) else None
+                if fmt:
+                    mime_type = f"image/{'jpeg' if fmt == 'jpeg' else fmt}"
+            except (UnidentifiedImageError, OSError):
+                mime_type = None
+        except Exception:
+            mime_type = None
+
     if mime_type:
         response = FileResponse(file_handle, as_attachment=False, content_type=mime_type)
     else:
