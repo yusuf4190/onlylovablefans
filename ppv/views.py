@@ -12,6 +12,48 @@ from .forms import PaymentRequestForm
 from .models import Content, CryptoWallet, PaymentRequest, PaymentSettings, BankCard
 
 
+def _detect_media_kind(file_field) -> str:
+    """
+    Server-side media type detection for unlocked content rendering.
+    Prefer extension/mime guess, then sniff image headers as a fallback.
+    """
+    name = getattr(file_field, "name", "") or ""
+    lower = name.lower()
+    if lower.endswith((".mp4", ".webm", ".mov", ".m4v")):
+        return "video"
+    if lower.endswith((".mp3", ".wav", ".m4a", ".aac", ".ogg")):
+        return "audio"
+    if lower.endswith((".jpg", ".jpeg", ".png", ".gif", ".webp")):
+        return "image"
+
+    import mimetypes
+
+    mt, _ = mimetypes.guess_type(name)
+    if mt:
+        if mt.startswith("image/"):
+            return "image"
+        if mt.startswith("video/"):
+            return "video"
+        if mt.startswith("audio/"):
+            return "audio"
+
+    # Fallback: sniff for image signature (handles storages that don't preserve extensions)
+    try:
+        from io import BytesIO
+        from PIL import Image, UnidentifiedImageError
+
+        with file_field.open("rb") as fh:
+            head = fh.read(8192)
+        try:
+            im = Image.open(BytesIO(head))
+            im.verify()
+            return "image"
+        except (UnidentifiedImageError, OSError):
+            return "other"
+    except Exception:
+        return "other"
+
+
 def home(request: HttpRequest) -> HttpResponse:
     contents = Content.objects.select_related("creator").order_by("-created_at")[:25]
     return render(request, "ppv/home.html", {"contents": contents})
@@ -93,7 +135,8 @@ def content_request(request: HttpRequest, content_id) -> HttpResponse:
 
 def status_page(request: HttpRequest, request_slug: str) -> HttpResponse:
     pr = get_object_or_404(PaymentRequest.objects.select_related("content", "content__creator"), request_slug=request_slug)
-    ctx = {"payment_request": pr, "now": timezone.now()}
+    media = pr.content.media_file
+    ctx = {"payment_request": pr, "now": timezone.now(), "media_kind": _detect_media_kind(media)}
 
     if request.headers.get("HX-Request") == "true":
         return render(request, "ppv/partials/status_panel.html", ctx)

@@ -68,25 +68,19 @@
       </div>
 
       <div class="mt-6 space-y-4">
-        {% with media=payment_request.content.media_file %}
-          {% if media|media_kind == "video" %}
-            <div class="rounded-2xl ring-1 ring-goldBrand/35 overflow-hidden">
-              <video class="w-full" controls playsinline src="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}"></video>
-            </div>
-          {% elif media|media_kind == "audio" %}
-            <div class="rounded-2xl ring-1 ring-goldBrand/35 bg-black/20 p-4">
-              <audio class="w-full" controls src="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}"></audio>
-            </div>
-          {% elif media|media_kind == "image" %}
-            <div class="rounded-2xl ring-1 ring-goldBrand/35 overflow-hidden">
-              <img class="w-full" src="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}" alt="Unlocked content" />
-            </div>
-          {% else %}
-            <a class="saas-btn inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold text-charcoal-950" href="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}">
-              Open content
-            </a>
-          {% endif %}
-        {% endwith %}
+        {% if media_kind == "video" %}
+          <div class="rounded-2xl ring-1 ring-goldBrand/35 overflow-hidden">
+            <video class="w-full" controls playsinline src="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}"></video>
+          </div>
+        {% elif media_kind == "audio" %}
+          <div class="rounded-2xl ring-1 ring-goldBrand/35 bg-black/20 p-4">
+            <audio class="w-full" controls src="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}"></audio>
+          </div>
+        {% else %}
+          <div class="rounded-2xl ring-1 ring-goldBrand/35 overflow-hidden">
+            <img class="w-full" src="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}" alt="Unlocked content" />
+          </div>
+        {% endif %}
       </div>
     {% else %}
       <div class="mt-5 rounded-2xl bg-white/5 p-4 text-sm text-white/70 ring-1 ring-white/10">
