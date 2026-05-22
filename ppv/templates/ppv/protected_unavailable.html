@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Onlylovablefans{% endblock %}
+
+{% block content %}
+  <div class="space-y-4">
+    <a href="/" class="inline-flex items-center text-sm font-semibold text-white/70 hover:text-white">← Home</a>
+
+    <section class="saas-card rounded-3xl p-6">
+      <div class="space-y-2">
+        {% if reason == "expired" %}
+          <h1 class="text-lg font-semibold tracking-tight text-white">Access expired</h1>
+          <p class="text-sm text-white/60">This access link is no longer valid. You’ll need a new request to unlock again.</p>
+        {% elif reason == "not_approved" %}
+          <h1 class="text-lg font-semibold tracking-tight text-white">Not unlocked yet</h1>
+          <p class="text-sm text-white/60">This content is only available after admin approval.</p>
+        {% else %}
+          <h1 class="text-lg font-semibold tracking-tight text-white">Content unavailable</h1>
+          <p class="text-sm text-white/60">We can’t load this content right now.</p>
+        {% endif %}
+      </div>
+
+      <div class="mt-5 flex flex-col gap-3 sm:flex-row">
+        <a class="saas-btn inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold text-charcoal-950" href="{% url 'ppv:status' request_slug=payment_request.request_slug %}">
+          View status page
+        </a>
+        <a class="saas-badge inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold text-white/80 hover:text-white" href="{% url 'ppv:content_request' content_id=payment_request.content.uuid %}">
+          Create a new request
+        </a>
+      </div>
+
+      <div class="mt-4 text-xs text-white/45">
+        Request: <span class="font-mono text-white/70">{{ payment_request.request_slug }}</span>
+      </div>
+    </section>
+  </div>
+{% endblock %}
+

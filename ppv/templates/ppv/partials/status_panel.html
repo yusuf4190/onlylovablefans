@@ -98,6 +98,10 @@
 
 <script>
   (function () {
+    if (window.__ppv_expiry_interval) {
+      clearInterval(window.__ppv_expiry_interval);
+      window.__ppv_expiry_interval = null;
+    }
     const el = document.getElementById("expiry-timer");
     if (!el) return;
     const expiryIso = el.getAttribute("data-expiry");
@@ -109,11 +113,13 @@
       const s = Math.floor(diff / 1000);
       const h = Math.floor(s / 3600);
       const m = Math.floor((s % 3600) / 60);
-      const ss = s % 60;
-      el.textContent = `Expires in ${h}h ${m}m ${ss}s`;
-      if (diff <= 0) clearInterval(t);
+      el.textContent = `Access expires in ${h}h ${m}m`;
+      if (diff <= 0 && window.__ppv_expiry_interval) {
+        clearInterval(window.__ppv_expiry_interval);
+        window.__ppv_expiry_interval = null;
+      }
     }
     tick();
-    const t = setInterval(tick, 1000);
+    window.__ppv_expiry_interval = setInterval(tick, 1000);
   })();
 </script>

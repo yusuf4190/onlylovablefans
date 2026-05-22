@@ -41,14 +41,7 @@
       </div>
     </section>
 
-    <div
-      id="status-panel"
-      hx-get="{% url 'ppv:status' request_slug=payment_request.request_slug %}"
-      hx-trigger="load, every 10s"
-      hx-swap="outerHTML"
-    >
-      {% include "ppv/partials/status_panel.html" %}
-    </div>
+    {% include "ppv/partials/status_panel.html" %}
   </div>
 
   <script>

@@ -125,14 +125,32 @@ def setup_superuser(request: HttpRequest, token: str) -> HttpResponse:
 
 def protected_media(request: HttpRequest, request_slug: str) -> HttpResponse:
     pr = get_object_or_404(PaymentRequest.objects.select_related("content"), request_slug=request_slug)
+
+    def _wants_html_response(req: HttpRequest) -> bool:
+        accept = (req.headers.get("Accept") or "").lower()
+        sec_fetch_dest = (req.headers.get("Sec-Fetch-Dest") or "").lower()
+        sec_fetch_mode = (req.headers.get("Sec-Fetch-Mode") or "").lower()
+        # Prefer HTML only for direct navigations/documents, not for <img>/<video>/<audio> fetches.
+        return ("text/html" in accept) or (sec_fetch_dest == "document") or (sec_fetch_mode == "navigate")
+
+    def _unavailable(reason: str) -> HttpResponse:
+        if _wants_html_response(request):
+            return render(
+                request,
+                "ppv/protected_unavailable.html",
+                {"payment_request": pr, "reason": reason, "now": timezone.now()},
+                status=403,
+            )
+        raise Http404()
+
     if pr.status != PaymentRequest.Status.APPROVED or not pr.expiry_at:
-        raise Http404()
+        return _unavailable("not_approved")
     if timezone.now() >= pr.expiry_at:
-        raise Http404()
+        return _unavailable("expired")
 
     f = pr.content.media_file
     if not f:
-        raise Http404()
+        return _unavailable("missing")
 
     try:
         file_handle = f.open("rb")
