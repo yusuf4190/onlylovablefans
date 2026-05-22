@@ -68,16 +68,16 @@
       </div>
 
       <div class="mt-6 space-y-4">
-        {% with filename=payment_request.content.media_file.name %}
-          {% if filename|media_kind == "video" %}
+        {% with media=payment_request.content.media_file %}
+          {% if media|media_kind == "video" %}
             <div class="rounded-2xl ring-1 ring-goldBrand/35 overflow-hidden">
               <video class="w-full" controls playsinline src="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}"></video>
             </div>
-          {% elif filename|media_kind == "audio" %}
+          {% elif media|media_kind == "audio" %}
             <div class="rounded-2xl ring-1 ring-goldBrand/35 bg-black/20 p-4">
               <audio class="w-full" controls src="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}"></audio>
             </div>
-          {% elif filename|media_kind == "image" %}
+          {% elif media|media_kind == "image" %}
             <div class="rounded-2xl ring-1 ring-goldBrand/35 overflow-hidden">
               <img class="w-full" src="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}" alt="Unlocked content" />
             </div>
