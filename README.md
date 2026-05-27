@@ -38,3 +38,28 @@ Notes:
 - Public previews use `MEDIA_ROOT` (`media/`), but paid content + evidence are stored under `PRIVATE_STORAGE_ROOT` (`private_media/`) via `django-private-storage`.
 - In production, ensure your platform does **not** serve `private_media/` directly; content is only served through `/protected/<slug>/`.
 - Render note: `render.yaml` mounts a disk at `/opt/render/project/src/storage` and sets `MEDIA_ROOT` + `PRIVATE_STORAGE_ROOT` there so uploads persist across deploys.
+
+Cloudinary upload flow:
+- Set `CLOUDINARY_URL` plus `CLOUDINARY_UNSIGNED_EVIDENCE_PRESET` for direct browser uploads.
+- The payment proof form uploads screenshots/PDFs directly to Cloudinary first, then stores only the Cloudinary metadata in the database.
+- Admin creator/content uploads also use direct Cloudinary uploads, which avoids pushing large files through Render.
+- For locked content, assets are uploaded as Cloudinary-authenticated media and rendered through signed delivery URLs.
+
+How to create the unsigned preset:
+1. Open the Cloudinary Console and go to `Settings` -> `Upload`.
+2. In `Upload presets`, click `Add upload preset`.
+3. Give it a name such as `ppv_evidence_unsigned` and mark it as `Unsigned`.
+4. Restrict `allowed formats` to the file types you want, such as `jpg`, `png`, `webp`, `pdf`.
+5. Set the folder to `ppv/evidence`.
+6. Turn on `Disallow public ID` so browser uploads cannot choose their own IDs.
+7. Keep `Generated public ID` on `Auto-generate an unguessable public ID value`.
+8. For `Generated display name`, `Use the filename of the uploaded file as the asset's display name` is fine.
+9. Optionally set a file size limit and any incoming transformations you want.
+10. Save the preset, then set `CLOUDINARY_UNSIGNED_EVIDENCE_PRESET=ppv_evidence_unsigned` in your environment.
+
+Notes on the options in the screenshot:
+- `Asset folder` controls where Cloudinary organizes the asset in the console.
+- `Disallow public ID` is a good safety setting for unsigned uploads.
+- `Generated public ID` should stay auto-generated for evidence uploads so users cannot guess or overwrite assets.
+- `Display name` only affects how the asset is shown in Cloudinary, not the actual delivery security.
+- For browser uploads, the preset should be `Unsigned`; for admin-side signed uploads, the app uses the signature endpoint instead.

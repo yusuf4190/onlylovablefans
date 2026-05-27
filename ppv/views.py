@@ -1,22 +1,33 @@
 from __future__ import annotations
 
+import json
 import os
 
 from django.contrib.auth import get_user_model
-from django.http import FileResponse, Http404, HttpRequest, HttpResponse
+from django.http import FileResponse, Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from .forms import PaymentRequestForm
+from .cloudinary_utils import build_upload_signature, get_cloudinary_config
 from .models import Content, CryptoWallet, PaymentRequest, PaymentSettings, BankCard
 
 
-def _detect_media_kind(file_field) -> str:
+def _detect_media_kind(source) -> str:
     """
     Server-side media type detection for unlocked content rendering.
     Prefer extension/mime guess, then sniff image headers as a fallback.
     """
+    resource_type = getattr(source, "media_cloudinary_resource_type", "") or ""
+    if resource_type == "video":
+        return "video"
+    if resource_type == "audio":
+        return "audio"
+    if resource_type == "image":
+        return "image"
+
+    file_field = getattr(source, "media_file", source)
     name = getattr(file_field, "name", "") or ""
     lower = name.lower()
     if lower.endswith((".mp4", ".webm", ".mov", ".m4v")):
@@ -59,9 +70,46 @@ def home(request: HttpRequest) -> HttpResponse:
     return render(request, "ppv/home.html", {"contents": contents})
 
 
+@require_http_methods(["POST"])
+def cloudinary_upload_signature(request: HttpRequest) -> JsonResponse:
+    if not request.user.is_staff:
+        return JsonResponse({"detail": "Forbidden"}, status=403)
+
+    config = get_cloudinary_config()
+    if not config:
+        return JsonResponse({"detail": "Cloudinary is not configured."}, status=400)
+
+    payload = json.loads(request.body or "{}")
+    params: dict[str, str] = {
+        "timestamp": str(int(timezone.now().timestamp())),
+    }
+
+    for key in ("folder", "public_id", "type", "resource_type"):
+        value = str(payload.get(key, "")).strip()
+        if value:
+            params[key] = value
+
+    signature = build_upload_signature(params)
+    return JsonResponse(
+        {
+            "cloudName": config.cloud_name,
+            "apiKey": config.api_key,
+            "signature": signature,
+            "timestamp": params["timestamp"],
+            "params": params,
+        }
+    )
+
+
 def content_request(request: HttpRequest, content_id) -> HttpResponse:
     content = get_object_or_404(Content, uuid=content_id)
     payment_settings = PaymentSettings.get_solo()
+    cloudinary_config = get_cloudinary_config()
+    cloudinary_upload = {
+        "enabled": bool(cloudinary_config),
+        "cloud_name": cloudinary_config.cloud_name if cloudinary_config else "",
+        "unsigned_preset": (os.environ.get("CLOUDINARY_UNSIGNED_EVIDENCE_PRESET") or "").strip(),
+    }
 
     if request.method == "POST":
         data = request.POST.copy()
@@ -85,6 +133,7 @@ def content_request(request: HttpRequest, content_id) -> HttpResponse:
                         "payment_settings": payment_settings,
                         "form": form,
                         "crypto_wallets": CryptoWallet.objects.all(),
+                        "cloudinary_upload": cloudinary_upload,
                     },
                 )
 
@@ -114,6 +163,7 @@ def content_request(request: HttpRequest, content_id) -> HttpResponse:
                             "payment_settings": payment_settings,
                             "form": form,
                             "crypto_wallets": CryptoWallet.objects.all(),
+                            "cloudinary_upload": cloudinary_upload,
                         },
                     )
 
@@ -129,14 +179,24 @@ def content_request(request: HttpRequest, content_id) -> HttpResponse:
     return render(
         request,
         "ppv/content_request.html",
-        {"content": content, "payment_settings": payment_settings, "form": form, "crypto_wallets": CryptoWallet.objects.all()},
+        {
+            "content": content,
+            "payment_settings": payment_settings,
+            "form": form,
+            "crypto_wallets": CryptoWallet.objects.all(),
+            "cloudinary_upload": cloudinary_upload,
+        },
     )
 
 
 def status_page(request: HttpRequest, request_slug: str) -> HttpResponse:
     pr = get_object_or_404(PaymentRequest.objects.select_related("content", "content__creator"), request_slug=request_slug)
-    media = pr.content.media_file
-    ctx = {"payment_request": pr, "now": timezone.now(), "media_kind": _detect_media_kind(media)}
+    ctx = {
+        "payment_request": pr,
+        "now": timezone.now(),
+        "media_kind": _detect_media_kind(pr.content),
+        "media_url": pr.content.media_url,
+    }
 
     if request.headers.get("HX-Request") == "true":
         return render(request, "ppv/partials/status_panel.html", ctx)

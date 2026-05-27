@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from .models import Content, Creator, CryptoWallet, PaymentRequest, PaymentSettings, BankCard
+from .forms import ContentAdminForm, CreatorAdminForm
 
 admin.site.site_header = "Onlylovablefans"
 admin.site.site_title = "Onlylovablefans Admin"
@@ -17,6 +18,7 @@ admin.site.index_title = "Admin"
 
 @admin.register(Creator)
 class CreatorAdmin(admin.ModelAdmin):
+    form = CreatorAdminForm
     search_fields = ["name", "slug"]
     list_display = ["name", "slug", "has_profile_picture"]
 
@@ -27,6 +29,7 @@ class CreatorAdmin(admin.ModelAdmin):
 
 @admin.register(Content)
 class ContentAdmin(admin.ModelAdmin):
+    form = ContentAdminForm
     search_fields = ["title", "creator__name"]
     list_filter = ["creator"]
     list_display = ["title", "creator", "price", "uuid", "created_at"]
@@ -165,6 +168,8 @@ class PaymentRequestAdmin(admin.ModelAdmin):
 
     def evidence_view(self, request: HttpRequest, pk: int) -> HttpResponse:
         pr = get_object_or_404(PaymentRequest, pk=pk)
+        if pr.evidence_url:
+            return redirect(pr.evidence_url)
         if not pr.evidence_file:
             raise Http404()
         try:

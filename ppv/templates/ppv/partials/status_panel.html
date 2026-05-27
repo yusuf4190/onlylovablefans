@@ -1,4 +1,5 @@
 {% load ppv_extras %}
+{% url 'ppv:protected_media' request_slug=payment_request.request_slug as protected_media_url %}
 
 <div
   id="status-panel"
@@ -70,15 +71,15 @@
       <div class="mt-6 space-y-4">
         {% if media_kind == "video" %}
           <div class="rounded-2xl ring-1 ring-goldBrand/35 overflow-hidden">
-            <video class="w-full" controls playsinline src="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}"></video>
+            <video class="w-full" controls playsinline src="{{ media_url|default:protected_media_url }}"></video>
           </div>
         {% elif media_kind == "audio" %}
           <div class="rounded-2xl ring-1 ring-goldBrand/35 bg-black/20 p-4">
-            <audio class="w-full" controls src="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}"></audio>
+            <audio class="w-full" controls src="{{ media_url|default:protected_media_url }}"></audio>
           </div>
         {% else %}
           <div class="rounded-2xl ring-1 ring-goldBrand/35 overflow-hidden">
-            <img class="w-full" src="{% url 'ppv:protected_media' request_slug=payment_request.request_slug %}" alt="Unlocked content" />
+            <img class="w-full" src="{{ media_url|default:protected_media_url }}" alt="Unlocked content" />
           </div>
         {% endif %}
       </div>

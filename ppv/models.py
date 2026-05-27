@@ -7,6 +7,8 @@ from django.db import models
 from django.utils import timezone
 from private_storage.fields import PrivateFileField
 
+from .cloudinary_utils import build_cloudinary_url, cloudinary_enabled
+
 # Determine storage for private files: prefer Cloudinary when configured,
 # otherwise fall back to the default private file system storage.
 try:
@@ -27,9 +29,29 @@ class Creator(models.Model):
     slug = models.SlugField(unique=True)
     bio = models.TextField(blank=True)
     profile_picture = models.ImageField(upload_to="creator_profiles/", blank=True)
+    profile_picture_cloudinary_id = models.CharField(max_length=255, blank=True, default="")
+    profile_picture_cloudinary_format = models.CharField(max_length=32, blank=True, default="")
+    profile_picture_cloudinary_delivery = models.CharField(max_length=20, blank=True, default="upload")
 
     def __str__(self) -> str:
         return self.name
+
+    @property
+    def profile_picture_url(self) -> str | None:
+        if self.profile_picture_cloudinary_id:
+            return build_cloudinary_url(
+                self.profile_picture_cloudinary_id,
+                resource_type="image",
+                delivery_type=self.profile_picture_cloudinary_delivery or "upload",
+                format=self.profile_picture_cloudinary_format,
+                sign=False,
+            )
+        if self.profile_picture:
+            try:
+                return self.profile_picture.url
+            except Exception:
+                return None
+        return None
 
 
 class Content(models.Model):
@@ -39,11 +61,47 @@ class Content(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     media_file = PrivateFileField(upload_to="content/", storage=PRIVATE_FILE_STORAGE)
     preview_image = models.ImageField(upload_to="previews/", blank=True)
+    media_cloudinary_id = models.CharField(max_length=255, blank=True, default="")
+    media_cloudinary_format = models.CharField(max_length=32, blank=True, default="")
+    media_cloudinary_resource_type = models.CharField(max_length=20, blank=True, default="image")
+    media_cloudinary_delivery = models.CharField(max_length=20, blank=True, default="authenticated")
+    preview_image_cloudinary_id = models.CharField(max_length=255, blank=True, default="")
+    preview_image_cloudinary_format = models.CharField(max_length=32, blank=True, default="")
+    preview_image_cloudinary_delivery = models.CharField(max_length=20, blank=True, default="upload")
     uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
         return f"{self.title} ({self.creator})"
+
+    @property
+    def media_url(self) -> str | None:
+        if self.media_cloudinary_id:
+            return build_cloudinary_url(
+                self.media_cloudinary_id,
+                resource_type=self.media_cloudinary_resource_type or "image",
+                delivery_type=self.media_cloudinary_delivery or "authenticated",
+                format=self.media_cloudinary_format,
+                sign=(self.media_cloudinary_delivery or "authenticated") in {"authenticated", "private"},
+            )
+        return None
+
+    @property
+    def preview_image_url(self) -> str | None:
+        if self.preview_image_cloudinary_id:
+            return build_cloudinary_url(
+                self.preview_image_cloudinary_id,
+                resource_type="image",
+                delivery_type=self.preview_image_cloudinary_delivery or "upload",
+                format=self.preview_image_cloudinary_format,
+                sign=False,
+            )
+        if self.preview_image:
+            try:
+                return self.preview_image.url
+            except Exception:
+                return None
+        return None
 
 
 class PaymentSettings(models.Model):
@@ -97,6 +155,10 @@ class PaymentRequest(models.Model):
     payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices)
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     evidence_file = PrivateFileField(blank=True, null=True, upload_to="evidence/", storage=PRIVATE_FILE_STORAGE)
+    evidence_cloudinary_id = models.CharField(max_length=255, blank=True, default="")
+    evidence_cloudinary_format = models.CharField(max_length=32, blank=True, default="")
+    evidence_cloudinary_resource_type = models.CharField(max_length=20, blank=True, default="image")
+    evidence_cloudinary_delivery = models.CharField(max_length=20, blank=True, default="upload")
     transaction_hash = models.CharField(max_length=200, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     admin_note = models.TextField(blank=True)
@@ -144,6 +206,23 @@ class PaymentRequest(models.Model):
 
     def __str__(self) -> str:
         return f"{self.request_slug} - {self.content} ({self.status})"
+
+    @property
+    def evidence_url(self) -> str | None:
+        if self.evidence_cloudinary_id:
+            return build_cloudinary_url(
+                self.evidence_cloudinary_id,
+                resource_type=self.evidence_cloudinary_resource_type or "image",
+                delivery_type=self.evidence_cloudinary_delivery or "upload",
+                format=self.evidence_cloudinary_format,
+                sign=False,
+            )
+        if self.evidence_file:
+            try:
+                return self.evidence_file.url
+            except Exception:
+                return None
+        return None
 
 
 class BankCard(models.Model):
